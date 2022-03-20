@@ -250,8 +250,6 @@ const drawElement = (ctx, _renderObject, _index, _layersLen) => {
         format.width,
         format.height
       );
-
-  addAttributes(_renderObject);
 };
 
 const constructLayerToDna = (_dna = "", _layers = []) => {
@@ -422,6 +420,7 @@ const startCreating = async () => {
             drawBackground();
           }
           renderObjectArray.forEach((renderObject, index) => {
+            addAttributes(renderObject);
             drawElement(
               ctx,
               renderObject,
