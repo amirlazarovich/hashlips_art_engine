@@ -405,7 +405,7 @@ const startCreating = async () => {
             hashlipsGiffer.start();
           }
           if (background.generate) {
-            //drawBackground();
+            drawBackground();
           }
           renderObjectArray.forEach((renderObject, index) => {
             drawElement(
