@@ -25,8 +25,11 @@ const {
   gif_new,
 } = require(`${basePath}/src/config.js`);
 const canvas = createCanvas(format.width, format.height);
+const canvasNoBackground = createCanvas(format.width, format.height);
 const ctx = canvas.getContext("2d");
+const ctxNoBackground = canvasNoBackground.getContext("2d");
 ctx.imageSmoothingEnabled = format.smoothing;
+ctxNoBackground.imageSmoothingEnabled = format.smoothing;
 var metadataList = [];
 var attributesList = [];
 var dnaList = new Set();
@@ -44,6 +47,9 @@ const buildSetup = () => {
   fs.mkdirSync(`${buildDir}/images`);
   if (gif.export || gif_new.export) {
     fs.mkdirSync(`${buildDir}/gifs`);
+  }
+  if (gif_new.export) {
+    fs.mkdirSync(`${buildDir}/images-no-background`);
   }
 };
 
@@ -125,7 +131,7 @@ const saveGif =  (_editionCount, renderObjectArray) => {
   }
 
   console.log(`Creating gif for ${name}`);
-  const image = `${buildDir}/images/${_editionCount}.png`;
+  const image = `${buildDir}/images-no-background/${_editionCount}.png`;
   const gif = `${basePath}/layers-gifs/Background/${name}.gif`;
   const output = `${buildDir}/gifs/${_editionCount}.gif`;
 
@@ -137,6 +143,13 @@ const saveImage = (_editionCount) => {
   fs.writeFileSync(
     `${buildDir}/images/${_editionCount}.png`,
     canvas.toBuffer("image/png")
+  );
+};
+
+const saveImageNoBackground = (_editionCount) => {
+  fs.writeFileSync(
+    `${buildDir}/images-no-background/${_editionCount}.png`,
+    canvasNoBackground.toBuffer("image/png")
   );
 };
 
@@ -212,7 +225,7 @@ const loadLayerImg = async (_layer) => {
   }
 };
 
-const addText = (_sig, x, y, size) => {
+const addText = (ctx, _sig, x, y, size) => {
   ctx.fillStyle = text.color;
   ctx.font = `${text.weight} ${size}pt ${text.family}`;
   ctx.textBaseline = text.baseline;
@@ -220,11 +233,11 @@ const addText = (_sig, x, y, size) => {
   ctx.fillText(_sig, x, y);
 };
 
-const drawElement = (_renderObject, _index, _layersLen) => {
+const drawElement = (ctx, _renderObject, _index, _layersLen) => {
   ctx.globalAlpha = _renderObject.layer.opacity;
   ctx.globalCompositeOperation = _renderObject.layer.blend;
   text.only
-    ? addText(
+    ? addText(ctx,
         `${_renderObject.layer.name}${text.spacer}${_renderObject.layer.selectedElement.name}`,
         text.xGap,
         text.yGap * (_index + 1),
@@ -393,6 +406,7 @@ const startCreating = async () => {
         await Promise.all(loadedElements).then((renderObjectArray) => {
           debugLogs ? console.log("Clearing canvas") : null;
           ctx.clearRect(0, 0, format.width, format.height);
+          ctxNoBackground.clearRect(0, 0, format.width, format.height);
           if (gif.export) {
             hashlipsGiffer = new HashlipsGiffer(
               canvas,
@@ -409,10 +423,20 @@ const startCreating = async () => {
           }
           renderObjectArray.forEach((renderObject, index) => {
             drawElement(
+              ctx,
               renderObject,
               index,
               layerConfigurations[layerConfigIndex].layersOrder.length
             );
+            
+            if (gif_new.export && renderObject.layer.name.toLowerCase() !== 'background') {
+              drawElement(
+                ctxNoBackground,
+                renderObject,
+                index,
+                layerConfigurations[layerConfigIndex].layersOrder.length
+              );
+            }
             if (gif.export) {
               hashlipsGiffer.add();
             }
@@ -425,6 +449,7 @@ const startCreating = async () => {
             : null;
           saveImage(abstractedIndexes[0]);
           if (gif_new.export) {
+            saveImageNoBackground(abstractedIndexes[0]);
             saveGif(abstractedIndexes[0], renderObjectArray);
           }
           
