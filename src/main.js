@@ -1,4 +1,5 @@
 const basePath = process.cwd();
+const { exec } = require("child_process");
 const { NETWORK } = require(`${basePath}/constants/network.js`);
 const fs = require("fs");
 const sha1 = require(`${basePath}/node_modules/sha1`);
@@ -21,6 +22,7 @@ const {
   network,
   solanaMetadata,
   gif,
+  gif_new,
 } = require(`${basePath}/src/config.js`);
 const canvas = createCanvas(format.width, format.height);
 const ctx = canvas.getContext("2d");
@@ -40,7 +42,7 @@ const buildSetup = () => {
   fs.mkdirSync(buildDir);
   fs.mkdirSync(`${buildDir}/json`);
   fs.mkdirSync(`${buildDir}/images`);
-  if (gif.export) {
+  if (gif.export || gif_new.export) {
     fs.mkdirSync(`${buildDir}/gifs`);
   }
 };
@@ -110,6 +112,27 @@ const layersSetup = (layersOrder) => {
   return layers;
 };
 
+const saveGif =  (_editionCount, renderObjectArray) => {
+  let name;
+  renderObjectArray.forEach((renderObject, index) => {
+    if (renderObject.layer.name.toLowerCase() === 'background') {
+      name = renderObject.layer.selectedElement.name;
+    }
+  });
+  
+  if (name === undefined) {
+    return;
+  }
+
+  console.log(`Creating gif for ${name}`);
+  const image = `${buildDir}/images/${_editionCount}.png`;
+  const gif = `${basePath}/layers-gifs/Background/${name}.gif`;
+  const output = `${buildDir}/gifs/${_editionCount}.gif`;
+
+  const createGifCmd = `magick convert ${gif} -coalesce null: ${image} -gravity center -layers composite ${output}`
+  exec(createGifCmd);
+};
+
 const saveImage = (_editionCount) => {
   fs.writeFileSync(
     `${buildDir}/images/${_editionCount}.png`,
@@ -132,14 +155,13 @@ const addMetadata = (_dna, _edition) => {
   let dateTime = Date.now();
   let tempMetadata = {
     name: `${namePrefix} #${_edition}`,
-    description: description,
-    image: `${baseUri}/${_edition}.png`,
+    description: description + `\n\nImage: ${baseUri}/${_edition}.png`,
+    image: `${baseUri}/${_edition}.gif`,
     dna: sha1(_dna),
-    edition: _edition,
+    member_number: _edition,
     date: dateTime,
     ...extraMetadata,
     attributes: attributesList,
-    compiler: "HashLips Art Engine",
   };
   if (network == NETWORK.sol) {
     tempMetadata = {
@@ -152,7 +174,7 @@ const addMetadata = (_dna, _edition) => {
       image: `${_edition}.png`,
       //Added metadata for solana
       external_url: solanaMetadata.external_url,
-      edition: _edition,
+      member_number: _edition,
       ...extraMetadata,
       attributes: tempMetadata.attributes,
       properties: {
@@ -308,14 +330,14 @@ const writeMetaData = (_data) => {
 };
 
 const saveMetaDataSingleFile = (_editionCount) => {
-  let metadata = metadataList.find((meta) => meta.edition == _editionCount);
+  let metadata = metadataList.find((meta) => meta.member_number == _editionCount);
   debugLogs
     ? console.log(
         `Writing metadata for ${_editionCount}: ${JSON.stringify(metadata)}`
       )
     : null;
   fs.writeFileSync(
-    `${buildDir}/json/${_editionCount}.json`,
+    `${buildDir}/json/${_editionCount}`,
     JSON.stringify(metadata, null, 2)
   );
 };
@@ -383,7 +405,7 @@ const startCreating = async () => {
             hashlipsGiffer.start();
           }
           if (background.generate) {
-            drawBackground();
+            //drawBackground();
           }
           renderObjectArray.forEach((renderObject, index) => {
             drawElement(
@@ -402,6 +424,10 @@ const startCreating = async () => {
             ? console.log("Editions left to create: ", abstractedIndexes)
             : null;
           saveImage(abstractedIndexes[0]);
+          if (gif_new.export) {
+            saveGif(abstractedIndexes[0], renderObjectArray);
+          }
+          
           addMetadata(newDna, abstractedIndexes[0]);
           saveMetaDataSingleFile(abstractedIndexes[0]);
           console.log(

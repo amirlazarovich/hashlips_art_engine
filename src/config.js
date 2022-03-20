@@ -5,9 +5,9 @@ const { NETWORK } = require(`${basePath}/constants/network.js`);
 const network = NETWORK.eth;
 
 // General metadata for Ethereum
-const namePrefix = "Your Collection";
-const description = "Remember to replace this description";
-const baseUri = "ipfs://NewUriToReplace";
+const namePrefix = "Pride Icons";
+const description = "Coming soon!";
+const baseUri = "ipfs://";
 
 const solanaMetadata = {
   symbol: "YC",
@@ -24,15 +24,10 @@ const solanaMetadata = {
 // If you have selected Solana then the collection starts from 0 automatically
 const layerConfigurations = [
   {
-    growEditionSizeTo: 5,
+    growEditionSizeTo: 3,
     layersOrder: [
       { name: "Background" },
-      { name: "Eyeball" },
-      { name: "Eye color" },
       { name: "Iris" },
-      { name: "Shine" },
-      { name: "Bottom lid" },
-      { name: "Top lid" },
     ],
   },
 ];
@@ -52,6 +47,10 @@ const gif = {
   repeat: 0,
   quality: 100,
   delay: 500,
+};
+
+const gif_new = {
+  export: true
 };
 
 const text = {
@@ -118,5 +117,6 @@ module.exports = {
   network,
   solanaMetadata,
   gif,
+  gif_new,
   preview_gif,
 };
